@@ -30,7 +30,7 @@ typedef struct {
     float *u;
     float *v;
     int N;
-    int nThreads;
+    int numofthreads;
     float *dotprod;
     pthread_mutex_t *mutex;
 } thread_data_t;
@@ -39,7 +39,7 @@ typedef struct {
 void* parrallelcalc(void* arg) {
     thread_data_t* data = (thread_data_t*)arg; 
     //range of rows for thread
-    int rows_per_thread = data->N / data->nThreads;
+    int rows_per_thread = data->N / data->numofthreads;
     int start_row = data->thread_id * rows_per_thread;
     int end_row = start_row + rows_per_thread;
 
@@ -78,14 +78,14 @@ int main( int argc, char **argv )
     //
 
     // Get problem size and number of threads from command line arguments.
-    int N, nThreads;
-    if( parseCmdLineArgs(argc,argv,&N,&nThreads)==-1 ) return EXIT_FAILURE;
+    int N, numofthreads;
+    if( parseCmdLineArgs(argc,argv,&N,&numofthreads)==-1 ) return EXIT_FAILURE;
 
     // Initialise (i.e, allocate memory and assign values to) the matrix and the vectors.
     float **M, *u, *v;
     if( initialiseMatrixAndVector(N,&M,&u,&v)==-1 ) return EXIT_FAILURE;
 
-    // For debugging purposes; only display small problems (e.g., N=8 and nThreads=2 or 4).
+    // For debugging purposes; only display small problems (e.g., N=8 and numofthreads=2 or 4).
     if( N<=12 ) displayProblem( N, M, u, v );
 
     // Start the timing now.
@@ -101,26 +101,26 @@ int main( int argc, char **argv )
     //
     float dotprod = 0.0f;        // You should leave the result of your calculation in this variable.
 
-    pthread_t *threads = malloc(nThreads * sizeof(pthread_t));
-    thread_data_t *thread_args = malloc(nThreads * sizeof(thread_data_t));
+    pthread_t *threads = malloc(numofthreads * sizeof(pthread_t));
+    thread_data_t *thread_args = malloc(numofthreads * sizeof(thread_data_t));
 
     // Step 1. Matrix-vector multiplication Mu = v.
     // Step 2. The dot product of the vector v with itself.
     // Both steps are handled within the thread function to maximize parallelism.
-    for (int i = 0; i < nThreads; i++) {
+    for (int i = 0; i < numofthreads; i++) {
         thread_args[i].thread_id = i;
         thread_args[i].M = M;
         thread_args[i].u = u;
         thread_args[i].v = v;
         thread_args[i].N = N;
-        thread_args[i].nThreads = nThreads;
+        thread_args[i].numofthreads = numofthreads;
         thread_args[i].dotprod = &dotprod;
         thread_args[i].mutex = &dot_mutex;
         pthread_create(&threads[i], NULL, parrallelcalc, &thread_args[i]);
     }
 
     // Wait for all threads to finish
-    for (int i = 0; i < nThreads; i++) {
+    for (int i = 0; i < numofthreads; i++) {
         pthread_join(threads[i], NULL);
     }
 
